@@ -1,6 +1,6 @@
 # ESP32-C3 Ultra Edition v4.1
 
-![Version](https://img.shields.io/badge/version-4.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-ESP32--C3-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 

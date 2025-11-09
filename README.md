@@ -1,302 +1,297 @@
-# AI Pocket v1
+# ESP32-C3 Ultra Edition v4.1
 
-Perangkat AI portabel bertenaga ESP32-C3 dengan fitur lengkap dan antarmuka intuitif.
+![Version](https://img.shields.io/badge/version-4.1-blue.svg)
+![Platform](https://img.shields.io/badge/platform-ESP32--C3-green.svg)
+![License](https://img.shields.io/badge/license-MIT-orange.svg)
 
-## 🌟 Fitur Utama
+A powerful multifunctional ESP32-C3 device featuring AI integration, wireless mesh networking, battery monitoring, and advanced power management.
 
-### 🤖 Integrasi AI Chat
-- **Dukungan Dual Gemini API**: Beralih antara dua API key Google Gemini
-- Respons AI real-time dengan animasi loading
-- Viewer respons yang bisa di-scroll
-- Pembungkus teks otomatis dan formatting pintar
+## ✨ Features
 
-### 📡 Manajemen WiFi
-- Scanner jaringan dengan indikator kekuatan sinyal
-- Koneksi otomatis ke jaringan tersimpan
-- Input password dengan keyboard virtual
-- Timer auto-off (dapat dikonfigurasi, default 5 menit)
-- Kemampuan untuk melupakan jaringan
+### 🤖 AI Integration
+- **Gemini AI Chat**: Integrated with Google's Gemini 2.0 Flash model
+- Dual API key support for redundancy
+- Real-time AI response with loading animations
+- Custom keyboard input system
 
-### ⚡ Manajemen Daya
-- **Visual Baterai**: Tampilan baterai animasi dengan efek charging
-- **Statistik**: Detail voltase dan estimasi waktu
-- **Grafik Daya**: Visualisasi data baterai historis
-- Deteksi charging real-time
-- Peringatan baterai kritis
+### 📡 Connectivity
+- **WiFi Manager**: Easy network scanning and connection
+- Auto-save credentials with preferences
+- WiFi signal strength indicator
+- Auto-off timer to save battery
 
-### 🧮 Kalkulator
-- Kalkulator lengkap
-- Operasi: +, -, *, /
-- Fungsi clear dan equals
-- Penanganan error (pembagian dengan nol)
+### 💬 ESP-NOW Mesh Networking
+- Peer-to-peer messaging without internet
+- Support up to 5 peers
+- Built-in inbox with read/unread status
+- Peer management (add, rename, delete)
+- MAC address-based identification
 
-### ⚙️ Fitur Sistem
-- **Info Sistem**: Monitoring heap memory, frekuensi CPU, loop rate
-- **Menu Pengaturan**: Toggle WiFi auto-off, akses info sistem
-- **Mode Tidur**: Deep sleep dengan wake-up tombol
-- Pola LED interaktif untuk berbagai state
+### 🔋 Advanced Power Management
+- **Battery Guardian**: Real-time voltage and percentage monitoring
+- Battery drain rate calculation
+- Estimated time remaining
+- Battery leak detection
+- Charging status indicator
+- Historical battery graph (60 data points)
 
-### 🎨 Antarmuka Pengguna
-- Layar OLED (128x64)
-- Keyboard virtual dengan 3 mode (huruf kecil, besar, angka)
-- Indikator baterai dan WiFi di semua layar
-- Progress bar untuk operasi
-- Layar loading beranimasi
+### 🔌 Power Consumption Monitor
+- Real-time power usage breakdown
+- WiFi, Display, and CPU consumption tracking
+- Visual power consumption graph
+- Total power draw calculation
 
-## 🔧 Kebutuhan Hardware
+### 🧮 Calculator
+- Full 4-function calculator (+ - × ÷)
+- Intuitive grid-based interface
+- Decimal support
+- Error handling
 
-### Komponen
-- Mikrokontroler ESP32-C3
-- Layar OLED SSD1306 (128x64, I2C)
-- 5 Tombol tekan (navigasi)
-- LED built-in
-- Baterai dengan rangkaian voltage divider
-- Rangkaian deteksi charging
+### ⚡ System Monitoring
+- Heap memory tracking with warnings
+- CPU frequency and temperature monitoring
+- Loop performance counter
+- Developer mode with real-time diagnostics
 
-### Konfigurasi Pin
+### 🧘 Zen Mode
+- Minimalist breathing meditation interface
+- Automatic WiFi disconnect
+- Timer with breathing visualization
+- Battery-efficient operation
+
+### 🎨 Display Features
+- 128x64 OLED display (SSD1306)
+- Custom icons for each menu
+- Smooth animations
+- Adjustable font size and animation speed
+- Breadcrumb navigation
+- Progress bars and loading animations
+
+### 💡 LED Indicators
+- **Heartbeat**: Main menu idle state
+- **Pulse**: Loading and charging states
+- **Breathing**: Low-power states
+- **Blink patterns**: Warnings and notifications
+- **Rainbow**: System info display
+- Context-aware LED feedback
+
+## 🛠️ Hardware Requirements
+
+### Main Components
+- **ESP32-C3 SuperMini** development board
+- **OLED Display**: SSD1306 128x64 (I2C)
+- **6 Push Buttons** for navigation
+- **Battery**: LiPo/Li-ion with monitoring circuit
+
+### Pin Configuration
 ```
-Layar OLED:
+OLED Display:
 - SDA: GPIO 20
 - SCL: GPIO 21
+- Address: 0x3C
 
-Tombol:
+Buttons:
 - UP: GPIO 5
 - DOWN: GPIO 6
 - LEFT: GPIO 3
 - RIGHT: GPIO 4
 - SELECT: GPIO 9
+- BACK: GPIO 2
 
-Lainnya:
-- LED: GPIO 8
-- BATTERY ADC: GPIO 0
-- CHARGING DETECT: GPIO 1
+System:
+- LED_BUILTIN: GPIO 8
+- BATTERY_PIN: GPIO 0 (ADC)
+- CHARGING_PIN: GPIO 1 (ADC)
 ```
 
-### Rangkaian Baterai
-- Rasio voltage divider: 2.0
-- Range baterai: 3.3V - 4.2V
-- Resolusi ADC: 12-bit
+### Circuit Notes
+- Voltage divider ratio: 2.0 (for battery monitoring)
+- Battery range: 3.3V - 4.2V
+- All buttons use internal pull-up resistors
 
-## 📦 Library yang Dibutuhkan
+## 📦 Dependencies
 
-Install library ini via Arduino Library Manager:
+Install these libraries via Arduino Library Manager:
 
 ```
-- Wire (bawaan)
-- WiFi (bawaan)
-- HTTPClient (bawaan)
-- Preferences (bawaan)
-- Adafruit_GFX
-- Adafruit_SSD1306
+- Adafruit GFX Library
+- Adafruit SSD1306
 - ArduinoJson
+- ESP32 Board Support (v2.0.0+)
 ```
 
-## 🚀 Petunjuk Setup
+## 🚀 Installation
 
-### 1. Perakitan Hardware
-1. Hubungkan layar OLED ke pin I2C (SDA=20, SCL=21)
-2. Pasang semua tombol dengan konfigurasi pull-up
-3. Hubungkan rangkaian monitoring baterai dengan voltage divider
-4. Hubungkan rangkaian deteksi charging
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/silentprojectid/AI-pocket.git
+   cd AI-pocket
+   ```
 
-### 2. Setup Software
+2. **Open in Arduino IDE**
+   - Install ESP32 board support
+   - Select board: "ESP32C3 Dev Module"
+   - Select correct COM port
 
-1. **Dapatkan API Key Gemini**:
-   - Kunjungi [Google AI Studio](https://aistudio.google.com)
-   - Buat dua API key
-   - Ganti di kode:
-     ```cpp
-     const char* geminiApiKey1 = "API_KEY_ANDA_1";
-     const char* geminiApiKey2 = "API_KEY_ANDA_2";
-     ```
+3. **Configure API Keys** (Optional)
+   - Edit the code to add your Gemini API keys:
+   ```cpp
+   const char* geminiApiKey1 = "YOUR_API_KEY_1";
+   const char* geminiApiKey2 = "YOUR_API_KEY_2";
+   ```
 
-2. **Konfigurasi Arduino IDE**:
-   - Board: ESP32C3 Dev Module
-   - Upload Speed: 921600
-   - CPU Frequency: 160MHz
-   - Flash Size: 4MB
-   - Partition Scheme: Default
+4. **Upload**
+   - Compile and upload to your ESP32-C3
+   - Open Serial Monitor (115200 baud) to see device MAC address
 
-3. **Upload Kode**:
-   - Verify dan compile
-   - Upload ke ESP32-C3
-   - Buka Serial Monitor (115200 baud)
+## 📖 Usage Guide
 
-### 3. Boot Pertama
-1. Device akan menampilkan menu WiFi jika belum ada jaringan tersimpan
-2. Scan dan koneksi ke WiFi
-3. Kredensial tersimpan otomatis
-4. Akses menu utama
+### First Boot
+1. Device will attempt to connect to saved WiFi
+2. If no credentials, WiFi menu opens automatically
+3. Navigate using UP/DOWN buttons
+4. SELECT to confirm, BACK to go back
 
-## 📱 Panduan Penggunaan
+### Main Menu Navigation
+- **Chat AI**: Talk to Gemini AI (requires WiFi)
+- **WiFi**: Scan and connect to networks
+- **Calculator**: Basic arithmetic operations
+- **Power**: Battery and power monitoring
+- **Battery Guard**: Advanced battery analytics
+- **ESP-NOW**: Mesh messaging (no WiFi needed)
+- **Settings**: Configure device preferences
+- **About**: Device information
 
-### Navigasi Menu Utama
-- **UP/DOWN**: Navigasi item menu
-- **SELECT**: Pilih opsi
+### ESP-NOW Messaging
+1. Go to ESP-NOW > Manage Peers
+2. Add peer using their MAC address
+3. Give peer a friendly name
+4. Send messages via ESP-NOW > Send Message
+5. Check inbox for received messages
 
-### Opsi Menu
-1. **Chat AI**: Mulai percakapan AI
-2. **WiFi Settings**: Kelola koneksi
-3. **Calculator**: Buka kalkulator
-4. **Power Central**: Manajemen baterai
-5. **Settings**: Konfigurasi sistem
+### Keyboard Input
+- Use arrow buttons to navigate
+- SELECT to type character
+- `#` key to switch keyboard layouts:
+  - Lowercase (a-z)
+  - Uppercase (A-Z)
+  - Numbers/Symbols
+  - Hex (for MAC addresses)
+- `<` to backspace
+- `OK` to submit
 
-### Keyboard Virtual
-- **Tombol Arah**: Gerakkan kursor
-- **SELECT**: Masukkan karakter
-- **Tombol #**: Ganti mode (a/A/#)
-- **Tombol <**: Backspace
-- **OK**: Kirim input
-
-### Kalkulator
-- **Tombol Arah**: Navigasi tombol
-- **SELECT**: Tekan tombol
-- **C**: Clear
-- **=**: Hitung hasil
-
-### Power Central
-1. **Battery Visual**: Tampilan baterai beranimasi
-2. **Statistics**: Info daya detail
-3. **Power Graph**: Data historis (50 data poin)
-4. **Back**: Kembali ke menu utama
-
-### Pengaturan
-- **WiFi Auto-Off**: Toggle timeout 5 menit
-- **System Info**: Lihat statistik memori dan CPU
-- **Sleep Mode**: Masuk deep sleep
-- **Back**: Kembali ke menu utama
-
-## 🎨 Pola LED
-
-Setiap state memiliki perilaku LED unik:
-- **Menu Utama**: Pola heartbeat
-- **Loading**: Pulsing
-- **Chat Response**: Efek breathing
-- **Calculator**: Blink lambat
-- **Layar Power**: Dinamis berdasarkan status baterai
-- **System Info**: Pola seperti pelangi
-- **Menu Sleep**: Fade lambat
-- **Keyboard**: Blink sedang
-- **WiFi**: Terkoneksi (lambat) / Terputus (cepat)
-- **API Select**: Pola kompleks
-
-## ⚡ Manajemen Daya
-
-### Monitoring Baterai
-- Update setiap 2 detik
-- Rata-rata 10 sampel untuk stabilitas
-- Kalkulasi persentase otomatis
-- Deteksi charging dengan hysteresis
+## ⚙️ Configuration
 
 ### WiFi Auto-Off
-- Timeout dapat dikonfigurasi (default: 5 menit)
-- Reset saat tombol ditekan
-- Hemat daya saat idle
-- Aktifkan/nonaktifkan di Settings
+Enable in Settings to disconnect WiFi after 5 minutes of inactivity (saves battery).
 
-### Deep Sleep
-- Wake-up via tombol SELECT
-- Disconnect WiFi sebelum tidur
-- Animasi fadeout LED
-- Konsumsi daya ultra-rendah
+### Display Settings
+- **Font Size**: 1 or 2
+- **Animation Speed**: 50-300ms
 
-## 🔧 Kustomisasi
+### Developer Mode
+Enables real-time system diagnostics including:
+- Heap usage monitoring
+- CPU temperature
+- Loop performance
+- Low memory warnings
 
-### Modifikasi Timeout
-```cpp
-const unsigned long wifiTimeout = 300000; // WiFi (5 menit)
-const unsigned long batteryCheckInterval = 2000; // Baterai (2 detik)
-```
+## 🔋 Battery Monitoring
 
-### Sesuaikan Kalibrasi Baterai
-```cpp
-#define BATTERY_MAX_VOLTAGE 4.2
-#define BATTERY_MIN_VOLTAGE 3.3
-#define VOLTAGE_DIVIDER_RATIO 2.0
-```
+The device tracks:
+- Current voltage and percentage
+- Charging status
+- Drain rate (%/minute)
+- Time remaining until empty/full
+- 60-minute historical graph
+- Battery leak detection
 
-### Ubah Pengaturan Display
-```cpp
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define SCREEN_ADDRESS 0x3C
-```
+### Battery Leak Warning
+If drain rate exceeds 2%/minute, the device displays a warning alert.
+
+## 📊 Power Consumption
+
+Typical power draw:
+- **WiFi Connected**: ~80mA
+- **WiFi Scanning**: ~120mA
+- **WiFi Off**: 0mA
+- **Display**: ~20mA
+- **CPU (80-160MHz)**: 30-60mA
+
+Use Power Monitor to see real-time breakdown.
 
 ## 🐛 Troubleshooting
 
-### Masalah Display
-- Cek alamat I2C (default: 0x3C)
-- Verifikasi koneksi SDA/SCL
-- Coba resistor pull-up berbeda
+### Device won't connect to WiFi
+- Check SSID and password
+- Ensure 2.4GHz network (ESP32-C3 doesn't support 5GHz)
+- Try "Forget Network" and reconnect
 
-### Koneksi WiFi Gagal
-- Cek keakuratan password
-- Pastikan jaringan 2.4GHz
-- Pindah lebih dekat ke router
-- Cek koneksi antena
+### Low memory warnings
+- Normal during heavy WiFi/AI usage
+- Restart device if persistent
+- Avoid leaving AI responses with very long text
 
-### Pembacaan Baterai Salah
-- Kalibrasi rasio voltage divider
-- Cek koneksi ADC
-- Verifikasi range voltase baterai
+### ESP-NOW messages not sending
+- Verify peer MAC address format (XX:XX:XX:XX:XX:XX)
+- Check both devices have ESP-NOW initialized
+- Ensure devices are within range (~100m open space)
 
-### Error API
-- Verifikasi validitas API key
-- Cek koneksi internet
-- Pastikan kuota cukup
-- Coba API key alternatif
+### Display not working
+- Check I2C connections (SDA/SCL)
+- Verify display address is 0x3C
+- Try adjusting I2C pins in code if needed
 
-### Tombol Tidak Responsif
-- Cek debounce delay (default 200ms)
-- Verifikasi konfigurasi pull-up
-- Test dengan multimeter
+## 🤝 Contributing
 
-## 📊 Spesifikasi Teknis
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
 
-- **MCU**: ESP32-C3 (RISC-V, 160MHz)
-- **RAM**: ~400KB tersedia
-- **Flash**: 4MB
-- **Display**: OLED 128x64 (I2C)
-- **WiFi**: 802.11 b/g/n (2.4GHz)
-- **Baterai**: Li-Po/Li-Ion (3.3V-4.2V)
-- **ADC**: Resolusi 12-bit
-- **Tombol**: 5x tactile switch
-- **LED**: 1x programmable
+## 📝 License
 
-## 🔐 Catatan Keamanan
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-- API key tersimpan di kode (pertimbangkan enkripsi)
-- Kredensial WiFi tersimpan di Preferences
-- Clear preferences untuk menghapus data tersimpan
-- Tidak ada telemetri atau logging eksternal
+## 👤 Author
 
-## 📄 Lisensi
+**Silent Project**
 
-Proyek ini disediakan apa adanya untuk penggunaan edukasi dan personal.
+- GitHub: [@silentprojectid](https://github.com/silentprojectid)
+- Project: [AI-pocket](https://github.com/silentprojectid/AI-pocket)
+- Instagram: [@sanzx_project.id](https://instagram.com/sanzx_project.id)
 
-## 🤝 Kontribusi
+## 🙏 Acknowledgments
 
-Kontribusi dipersilakan! Area untuk perbaikan:
-- Provider AI tambahan
-- Lebih banyak fungsi kalkulator
-- Animasi kustom
-- Optimasi daya
-- Recovery error
-- Dukungan lokalisasi
-- Fitur deep sleep
-## 📞 Dukungan
+- Google Gemini AI for API access
+- Adafruit for display libraries
+- ESP32 community for support
+- All contributors and testers
 
-Untuk masalah dan pertanyaan:
-1. Cek bagian troubleshooting
-2. Verifikasi koneksi hardware
-3. Test dengan konfigurasi minimal
-4. Cek output serial monitor
+## 📸 Screenshots
+
+*Add your device photos and screenshots here*
+
+## 🔮 Future Plans
+
+- [ ] Multiple language support
+- [ ] Custom themes
+- [ ] Extended battery analytics
+- [ ] File system storage
+- [ ] OTA updates
+- [ ] More AI model options
+- [ ] Game applications
+
+## ⚠️ Disclaimer
+
+This project is for educational purposes. Use Gemini API responsibly and within Google's terms of service. Battery monitoring values are estimates and may vary.
 
 ---
 
-**Proyek**: AI Pocket v1  
-**Versi**: 1.0  
-**Terakhir Update**: 2025 
-**Status**: Rilis BETA 
+**Made with ❤️ by sanzx_project.id**
 
-Dibuat dengan ❤️ untuk penggemar ESP32-C3 dan AI enthusiast
+*Star ⭐ this repository if you find it useful!*
+
+**Repository**: [github.com/silentprojectid/AI-pocket](https://github.com/silentprojectid/AI-pocket)

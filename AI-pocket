@@ -138,6 +138,10 @@ int loadingFrame = 0;
 unsigned long lastLoadingUpdate = 0;
 int selectedAPIKey = 1;
 
+int progressBarTarget = 0;
+int progressBarCurrent = 0;
+unsigned long lastProgressBarUpdate = 0;
+
 // Transition effects
 int transitionFrame = 0;
 bool transitionActive = false;
@@ -211,6 +215,22 @@ enum AppState {
 
 AppState currentState = STATE_MAIN_MENU;
 AppState previousState = STATE_MAIN_MENU;
+AppState targetState = STATE_MAIN_MENU;
+
+void handleTransition();
+
+void startTransition(TransitionType type) {
+  transitionActive = true;
+  currentTransition = type;
+  transitionFrame = 0;
+}
+
+void changeState(AppState newState, TransitionType transition) {
+  if (currentState == newState && !transitionActive) return;
+  previousState = currentState;
+  targetState = newState;
+  startTransition(transition);
+}
 
 int cursorX = 0, cursorY = 0;
 String userInput = "";
@@ -306,7 +326,7 @@ const unsigned char ICON_PONG[] PROGMEM = {
 
 
 // Forward declarations
-void showMainMenu();
+void showMainMenu(int x_offset = 0);
 void updateMainMenu();
 
 struct MenuItem {
@@ -326,38 +346,38 @@ MenuItem menuItems[] = {
   {"Pong Game", ICON_PONG},
   {"About", ICON_DEV}
 };
-void showWiFiMenu();
-void showCalculator();
-void showPowerBase();
-void showPowerVisual();
-void showPowerStats();
-void showPowerGraph();
-void showPowerConsumption();
-void showAPISelect();
-void showSystemInfo();
-void showSettingsMenu();
-void showDisplaySettings();
-void showDeveloperMode();
-void showZenMode();
-void showBatteryGuardian();
-void showESPNowMenu();
-void showESPNowSend();
-void showESPNowInbox();
-void showESPNowPeers();
-void showESPNowAddPeer();
-void showESPNowRenamePeer();
-void showESPNowDeletePeer();
-void showAbout();
+void showWiFiMenu(int x_offset = 0);
+void showCalculator(int x_offset = 0);
+void showPowerBase(int x_offset = 0);
+void showPowerVisual(int x_offset = 0);
+void showPowerStats(int x_offset = 0);
+void showPowerGraph(int x_offset = 0);
+void showPowerConsumption(int x_offset = 0);
+void showAPISelect(int x_offset = 0);
+void showSystemInfo(int x_offset = 0);
+void showSettingsMenu(int x_offset = 0);
+void showDisplaySettings(int x_offset = 0);
+void showDeveloperMode(int x_offset = 0);
+void showZenMode(int x_offset = 0);
+void showBatteryGuardian(int x_offset = 0);
+void showESPNowMenu(int x_offset = 0);
+void showESPNowSend(int x_offset = 0);
+void showESPNowInbox(int x_offset = 0);
+void showESPNowPeers(int x_offset = 0);
+void showESPNowAddPeer(int x_offset = 0);
+void showESPNowRenamePeer(int x_offset = 0);
+void showESPNowDeletePeer(int x_offset = 0);
+void showAbout(int x_offset = 0);
 void initSnakeGame();
-void showSnakeGame();
+void showSnakeGame(int x_offset = 0);
 void updateSnakeGame();
 void initPongGame();
-void showPongGame();
+void showPongGame(int x_offset = 0);
 void updatePongGame();
 void showLoadingAnimation();
 void showProgressBar(String title, int percent);
-void displayWiFiNetworks();
-void drawKeyboard();
+void displayWiFiNetworks(int x_offset = 0);
+void drawKeyboard(int x_offset = 0);
 void handleMainMenuSelect();
 void handleWiFiMenuSelect();
 void handlePowerBaseSelect();
@@ -369,10 +389,10 @@ void handleCalculatorInput();
 void handleBackButton();
 void connectToWiFi(String ssid, String password);
 void scanWiFiNetworks();
-void displayResponse();
+void displayResponse(int x_offset = 0);
 void showStatus(String message, int delayMs);
 void forgetNetwork();
-void refreshCurrentScreen();
+void refreshCurrentScreen(int x_offset = 0);
 void calculateResult();
 void resetCalculator();
 void updateBatteryLevel();
@@ -380,11 +400,11 @@ void updateBatteryHistory();
 void updateSystemStats();
 void updatePowerConsumption();
 void checkBatteryHealth();
-void drawBatteryIndicator();
-void drawWiFiSignalBars();
-void drawChargingPlug();
-void drawBreadcrumb();
-void drawIcon(int x, int y, const unsigned char* icon);
+void drawBatteryIndicator(int x_offset = 0);
+void drawWiFiSignalBars(int x_offset = 0);
+void drawChargingPlug(int x_offset = 0);
+void drawBreadcrumb(int x_offset = 0);
+void drawIcon(int x, int y, const unsigned char* icon, int x_offset = 0);
 void startTransition(TransitionType type);
 void sendToGemini();
 void checkWiFiTimeout();
@@ -435,6 +455,46 @@ void ledSuccess() {
     digitalWrite(LED_BUILTIN, LOW);
     delay(100);
   }
+}
+
+void handleTransition() {
+    const int animFrames = 8;
+    if (transitionFrame < animFrames) {
+        transitionFrame++;
+    }
+
+    display.clearDisplay();
+
+    int x_old = 0;
+    int x_new = 0;
+
+    if (currentTransition == TRANS_SLIDE_LEFT) {
+        x_old = map(transitionFrame, 0, animFrames, 0, -SCREEN_WIDTH);
+        x_new = map(transitionFrame, 0, animFrames, SCREEN_WIDTH, 0);
+    } else if (currentTransition == TRANS_SLIDE_RIGHT) {
+        x_old = map(transitionFrame, 0, animFrames, 0, SCREEN_WIDTH);
+        x_new = map(transitionFrame, 0, animFrames, -SCREEN_WIDTH, 0);
+    }
+
+    // Draw the old screen sliding out
+    AppState tempState = currentState;
+    currentState = previousState;
+    refreshCurrentScreen(x_old);
+
+    // Draw the new screen sliding in
+    currentState = targetState;
+    refreshCurrentScreen(x_new);
+    currentState = tempState;
+
+
+    if (transitionFrame >= animFrames) {
+        transitionActive = false;
+        currentState = targetState;
+        currentTransition = TRANS_NONE;
+        refreshCurrentScreen(0);
+    }
+
+    display.display();
 }
 
 void ledError() {
@@ -577,7 +637,7 @@ void loop() {
     lastBatteryCheck = currentMillis;
     
     if (currentState != STATE_LOADING) {
-      refreshCurrentScreen();
+      refreshCurrentScreen(0);
     }
   }
   
@@ -677,6 +737,11 @@ void loop() {
     }
   }
   
+  if (transitionActive) {
+    handleTransition();
+    return;
+  }
+
   if (currentMillis - lastDebounce > debounceDelay) {
     bool buttonPressed = false;
     
@@ -867,16 +932,15 @@ void sendESPNowMessage(String message, uint8_t* targetMac) {
   esp_now_send(targetMac, (uint8_t*)message.c_str(), message.length());
 }
 
-void showESPNowMenu() {
-  display.clearDisplay();
-  drawBatteryIndicator();
-  drawBreadcrumb();
+void showESPNowMenu(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
+  drawBreadcrumb(x_offset);
   
   display.setTextSize(1);
-  display.setCursor(20, 12);
+  display.setCursor(20 + x_offset, 12);
   display.print("ESP-NOW MESH");
   
-  drawIcon(5, 12, ICON_MESSAGE);
+  drawIcon(5, 12, ICON_MESSAGE, x_offset);
   
   const char* menuItems[] = {
     "Send Message",
@@ -886,7 +950,7 @@ void showESPNowMenu() {
   };
   
   for (int i = 0; i < 4; i++) {
-    display.setCursor(10, 26 + i * 10);
+    display.setCursor(10 + x_offset, 26 + i * 10);
     if (i == menuSelection) {
       display.print("> ");
     } else {
@@ -902,34 +966,31 @@ void showESPNowMenu() {
     }
   }
   
-  display.setCursor(85, 56);
+  display.setCursor(85 + x_offset, 56);
   display.print("Peers:");
   display.print(peerCount);
-  
-  display.display();
 }
 
-void showESPNowDeletePeer() {
-  display.clearDisplay();
-  drawBatteryIndicator();
-  drawBreadcrumb();
+void showESPNowDeletePeer(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
+  drawBreadcrumb(x_offset);
 
   display.setTextSize(1);
-  display.setCursor(20, 2);
+  display.setCursor(20 + x_offset, 2);
   display.print("DELETE PEER");
 
-  display.drawLine(0, 12, SCREEN_WIDTH, 12, SSD1306_WHITE);
+  display.drawLine(0 + x_offset, 12, SCREEN_WIDTH + x_offset, 12, SSD1306_WHITE);
 
   if (peerCount == 0) {
-    display.setCursor(20, 30);
+    display.setCursor(20 + x_offset, 30);
     display.print("No peers!");
   } else {
-    display.setCursor(5, 16);
+    display.setCursor(5 + x_offset, 16);
     display.print("Select peer to delete:");
 
     for (int i = 0; i < min(peerCount, 3); i++) {
       int y = 28 + i * 10;
-      display.setCursor(10, y);
+      display.setCursor(10 + x_offset, y);
       if (i == selectedPeer) {
         display.print("> ");
       } else {
@@ -939,11 +1000,9 @@ void showESPNowDeletePeer() {
       display.print(peers[i].name);
     }
 
-    display.setCursor(5, 56);
+    display.setCursor(5 + x_offset, 56);
     display.print("SELECT to confirm");
   }
-
-  display.display();
 }
 
 // ========== SNAKE GAME ==========
@@ -970,41 +1029,37 @@ void initSnakeGame() {
   showSnakeGame();
 }
 
-void showSnakeGame() {
-  display.clearDisplay();
-
+void showSnakeGame(int x_offset = 0) {
   // Draw border
-  display.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SSD1306_WHITE);
+  display.drawRect(0 + x_offset, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SSD1306_WHITE);
 
   // Draw snake
   for (int i = 0; i < snakeLength; i++) {
-    display.fillRect(snake[i].x * 8 + 1, snake[i].y * 8 + 1, 6, 6, SSD1306_WHITE);
+    display.fillRect(snake[i].x * 8 + 1 + x_offset, snake[i].y * 8 + 1, 6, 6, SSD1306_WHITE);
   }
 
   // Draw food
-  display.fillCircle(foodX * 8 + 4, foodY * 8 + 4, 3, SSD1306_WHITE);
+  display.fillCircle(foodX * 8 + 4 + x_offset, foodY * 8 + 4, 3, SSD1306_WHITE);
 
   // Draw score
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(2, 2);
+  display.setCursor(2 + x_offset, 2);
   display.print("Score: ");
   display.print(score);
 
-  display.setCursor(70, 2);
+  display.setCursor(70 + x_offset, 2);
   display.print("Hi: ");
   display.print(highScore);
 
   if (gameOver) {
     display.setTextSize(2);
-    display.setCursor(20, 20);
+    display.setCursor(20 + x_offset, 20);
     display.print("GAME OVER");
     display.setTextSize(1);
-    display.setCursor(10, 40);
+    display.setCursor(10 + x_offset, 40);
     display.print("SELECT to restart");
   }
-
-  display.display();
 }
 
 void updateSnakeGame() {
@@ -1097,35 +1152,31 @@ void initPongGame() {
   lastPongUpdate = millis();
 }
 
-void showPongGame() {
-  display.clearDisplay();
-
+void showPongGame(int x_offset = 0) {
   // Draw paddles
-  display.fillRect(0, (int)playerY, PADDLE_WIDTH, PADDLE_HEIGHT, SSD1306_WHITE);
-  display.fillRect(SCREEN_WIDTH - PADDLE_WIDTH, (int)opponentY, PADDLE_WIDTH, PADDLE_HEIGHT, SSD1306_WHITE);
+  display.fillRect(0 + x_offset, (int)playerY, PADDLE_WIDTH, PADDLE_HEIGHT, SSD1306_WHITE);
+  display.fillRect(SCREEN_WIDTH - PADDLE_WIDTH + x_offset, (int)opponentY, PADDLE_WIDTH, PADDLE_HEIGHT, SSD1306_WHITE);
 
   // Draw ball
-  display.fillCircle(ballX, ballY, 3, SSD1306_WHITE);
+  display.fillCircle(ballX + x_offset, ballY, 3, SSD1306_WHITE);
 
   // Draw scores
   display.setTextSize(1);
-  display.setCursor(SCREEN_WIDTH / 2 - 20, 2);
+  display.setCursor(SCREEN_WIDTH / 2 - 20 + x_offset, 2);
   display.print(playerScore);
-  display.setCursor(SCREEN_WIDTH / 2 + 14, 2);
+  display.setCursor(SCREEN_WIDTH / 2 + 14 + x_offset, 2);
   display.print(opponentScore);
 
   // Draw center line
   for (int i = 0; i < SCREEN_HEIGHT; i += 4) {
-    display.drawPixel(SCREEN_WIDTH / 2, i, SSD1306_WHITE);
+    display.drawPixel(SCREEN_WIDTH / 2 + x_offset, i, SSD1306_WHITE);
   }
 
   if (pongGameOver) {
     display.setTextSize(2);
-    display.setCursor(20, 20);
+    display.setCursor(20 + x_offset, 20);
     display.print("GAME OVER");
   }
-
-  display.display();
 }
 
 void updatePongGame() {
@@ -1194,23 +1245,22 @@ void updatePongGame() {
 
 // ========== WIFI MENU ==========
 
-void showWiFiMenu() {
-  display.clearDisplay();
-  drawBatteryIndicator();
-  drawBreadcrumb();
+void showWiFiMenu(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
+  drawBreadcrumb(x_offset);
   
   display.setTextSize(1);
-  display.setCursor(25, 2);
+  display.setCursor(25 + x_offset, 2);
   display.print("WiFi MENU");
   
-  drawIcon(10, 2, ICON_WIFI);
+  drawIcon(10, 2, ICON_WIFI, x_offset);
   
-  display.drawLine(0, 12, SCREEN_WIDTH, 12, SSD1306_WHITE);
+  display.drawLine(0 + x_offset, 12, SCREEN_WIDTH + x_offset, 12, SSD1306_WHITE);
   
-  display.setCursor(5, 16);
+  display.setCursor(5 + x_offset, 16);
   if (WiFi.status() == WL_CONNECTED) {
     display.print("Connected:");
-    display.setCursor(5, 24);
+    display.setCursor(5 + x_offset, 24);
     String ssid = WiFi.SSID();
     if (ssid.length() > 18) {
       ssid = ssid.substring(0, 18) + "..";
@@ -1223,7 +1273,7 @@ void showWiFiMenu() {
   const char* menuItems[] = {"Scan Networks", "Forget Network", "Back"};
   
   for (int i = 0; i < 3; i++) {
-    display.setCursor(5, 36 + i * 9);
+    display.setCursor(5 + x_offset, 36 + i * 9);
     if (i == menuSelection) {
       display.print("> ");
     } else {
@@ -1231,8 +1281,6 @@ void showWiFiMenu() {
     }
     display.print(menuItems[i]);
   }
-  
-  display.display();
 }
 
 void handleWiFiMenuSelect() {
@@ -1244,9 +1292,7 @@ void handleWiFiMenuSelect() {
       forgetNetwork();
       break;
     case 2:
-      currentState = STATE_MAIN_MENU;
-      menuSelection = 0;
-      showMainMenu();
+      changeState(STATE_MAIN_MENU, TRANS_SLIDE_RIGHT);
       break;
   }
 }
@@ -1292,21 +1338,20 @@ void scanWiFiNetworks() {
   displayWiFiNetworks();
 }
 
-void displayWiFiNetworks() {
-  display.clearDisplay();
-  drawBatteryIndicator();
-  drawBreadcrumb();
+void displayWiFiNetworks(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
+  drawBreadcrumb(x_offset);
   
   display.setTextSize(1);
-  display.setCursor(5, 0);
+  display.setCursor(5 + x_offset, 0);
   display.print("WiFi (");
   display.print(networkCount);
   display.print(")");
   
-  display.drawLine(0, 10, SCREEN_WIDTH, 10, SSD1306_WHITE);
+  display.drawLine(0 + x_offset, 10, SCREEN_WIDTH + x_offset, 10, SSD1306_WHITE);
   
   if (networkCount == 0) {
-    display.setCursor(10, 25);
+    display.setCursor(10 + x_offset, 25);
     display.println("No networks found");
   } else {
     int startIdx = wifiPage * wifiPerPage;
@@ -1316,13 +1361,13 @@ void displayWiFiNetworks() {
       int y = 12 + (i - startIdx) * 12;
       
       if (i == selectedNetwork) {
-        display.fillRect(0, y, SCREEN_WIDTH, 11, SSD1306_WHITE);
+        display.fillRect(0 + x_offset, y, SCREEN_WIDTH, 11, SSD1306_WHITE);
         display.setTextColor(SSD1306_BLACK);
       } else {
         display.setTextColor(SSD1306_WHITE);
       }
       
-      display.setCursor(2, y + 2);
+      display.setCursor(2 + x_offset, y + 2);
       
       String displaySSID = networks[i].ssid;
       if (displaySSID.length() > 14) {
@@ -1331,13 +1376,13 @@ void displayWiFiNetworks() {
       display.print(displaySSID);
       
       if (networks[i].encrypted) {
-        display.setCursor(100, y + 2);
+        display.setCursor(100 + x_offset, y + 2);
         display.print("L");
       }
       
       int bars = map(networks[i].rssi, -100, -50, 1, 4);
       bars = constrain(bars, 1, 4);
-      display.setCursor(110, y + 2);
+      display.setCursor(110 + x_offset, y + 2);
       for (int b = 0; b < bars; b++) {
         display.print("|");
       }
@@ -1346,15 +1391,13 @@ void displayWiFiNetworks() {
     }
     
     if (networkCount > wifiPerPage) {
-      display.setCursor(45, 56);
+      display.setCursor(45 + x_offset, 56);
       display.print("Pg ");
       display.print(wifiPage + 1);
       display.print("/");
       display.print((networkCount + wifiPerPage - 1) / wifiPerPage);
     }
   }
-  
-  display.display();
 }
 
 void connectToWiFi(String ssid, String password) {
@@ -1415,19 +1458,18 @@ void checkWiFiTimeout() {
 
 // ========== CALCULATOR ==========
 
-void showCalculator() {
-  display.clearDisplay();
-  drawBatteryIndicator();
-  drawBreadcrumb();
+void showCalculator(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
+  drawBreadcrumb(x_offset);
   
   display.setTextSize(1);
-  display.setCursor(30, 2);
+  display.setCursor(30 + x_offset, 2);
   display.print("CALCULATOR");
   
-  drawIcon(15, 2, ICON_CALC);
+  drawIcon(15, 2, ICON_CALC, x_offset);
   
-  display.drawRect(2, 12, SCREEN_WIDTH - 4, 12, SSD1306_WHITE);
-  display.setCursor(6, 15);
+  display.drawRect(2 + x_offset, 12, SCREEN_WIDTH - 4, 12, SSD1306_WHITE);
+  display.setCursor(6 + x_offset, 15);
   String displayText = calcDisplay;
   if (displayText.length() > 18) {
     displayText = displayText.substring(displayText.length() - 18);
@@ -1448,19 +1490,18 @@ void showCalculator() {
       int y = startY + row * 9;
       
       if (row == cursorY && col == cursorX) {
-        display.fillRect(x - 2, y - 1, 16, 8, SSD1306_WHITE);
+        display.fillRect(x - 2 + x_offset, y - 1, 16, 8, SSD1306_WHITE);
         display.setTextColor(SSD1306_BLACK);
       } else {
         display.setTextColor(SSD1306_WHITE);
       }
       
-      display.setCursor(x, y);
+      display.setCursor(x + x_offset, y);
       display.print(calcPad[row][col]);
     }
   }
   
   display.setTextColor(SSD1306_WHITE);
-  display.display();
 }
 
 void handleCalculatorInput() {
@@ -1546,44 +1587,41 @@ void resetCalculator() {
 
 // ========== API SELECT & CHAT ==========
 
-void showAPISelect() {
-  display.clearDisplay();
-  drawBatteryIndicator();
-  drawBreadcrumb();
+void showAPISelect(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
+  drawBreadcrumb(x_offset);
   
   display.setTextSize(1);
-  display.setCursor(15, 5);
+  display.setCursor(15 + x_offset, 5);
   display.print("SELECT GEMINI API");
   
-  display.drawLine(0, 15, SCREEN_WIDTH, 15, SSD1306_WHITE);
+  display.drawLine(0 + x_offset, 15, SCREEN_WIDTH + x_offset, 15, SSD1306_WHITE);
   
   int y1 = 25;
   if (menuSelection == 0) {
-    display.fillRect(5, y1 - 2, 118, 12, SSD1306_WHITE);
+    display.fillRect(5 + x_offset, y1 - 2, 118, 12, SSD1306_WHITE);
     display.setTextColor(SSD1306_BLACK);
   }
-  display.setCursor(10, y1);
+  display.setCursor(10 + x_offset, y1);
   display.print("1. Gemini API #1");
   if (selectedAPIKey == 1) {
-    display.setCursor(100, y1);
+    display.setCursor(100 + x_offset, y1);
     display.print("[*]");
   }
   display.setTextColor(SSD1306_WHITE);
   
   int y2 = 42;
   if (menuSelection == 1) {
-    display.fillRect(5, y2 - 2, 118, 12, SSD1306_WHITE);
+    display.fillRect(5 + x_offset, y2 - 2, 118, 12, SSD1306_WHITE);
     display.setTextColor(SSD1306_BLACK);
   }
-  display.setCursor(10, y2);
+  display.setCursor(10 + x_offset, y2);
   display.print("2. Gemini API #2");
   if (selectedAPIKey == 2) {
-    display.setCursor(100, y2);
+    display.setCursor(100 + x_offset, y2);
     display.print("[*]");
   }
   display.setTextColor(SSD1306_WHITE);
-  
-  display.display();
 }
 
 void handleAPISelectSelect() {
@@ -1678,9 +1716,8 @@ void sendToGemini() {
   displayResponse();
 }
 
-void displayResponse() {
-  display.clearDisplay();
-  drawBatteryIndicator();
+void displayResponse(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
   
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -1706,7 +1743,7 @@ void displayResponse() {
       }
       
       if (y >= -lineHeight && y < SCREEN_HEIGHT) {
-        display.setCursor(x, y);
+        display.setCursor(x + x_offset, y);
         display.print(word);
       }
       
@@ -1721,19 +1758,16 @@ void displayResponse() {
       word += c;
     }
   }
-  
-  display.display();
 }
 
 // ========== KEYBOARD ==========
 
-void drawKeyboard() {
-  display.clearDisplay();
-  drawBatteryIndicator();
+void drawKeyboard(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
   
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
+  display.setCursor(0 + x_offset, 0);
   
   if (currentState == STATE_PASSWORD_INPUT) {
     display.print("Pass:");
@@ -1749,7 +1783,7 @@ void drawKeyboard() {
     display.print(displayText);
   }
   
-  display.setCursor(SCREEN_WIDTH - 18, 0);
+  display.setCursor(SCREEN_WIDTH - 18 + x_offset, 0);
   if (currentKeyboardMode == MODE_UPPER) {
     display.print("A");
   } else if (currentKeyboardMode == MODE_NUMBERS) {
@@ -1760,7 +1794,7 @@ void drawKeyboard() {
     display.print("a");
   }
   
-  display.drawLine(0, 10, SCREEN_WIDTH, 10, SSD1306_WHITE);
+  display.drawLine(0 + x_offset, 10, SCREEN_WIDTH + x_offset, 10, SSD1306_WHITE);
   
   int startY = 14;
   const char* currentKeyboard[3][10];
@@ -1786,13 +1820,13 @@ void drawKeyboard() {
       int y = startY + row * 16;
       
       if (row == cursorY && col == cursorX) {
-        display.fillRect(x - 1, y - 1, 11, 10, SSD1306_WHITE);
+        display.fillRect(x - 1 + x_offset, y - 1, 11, 10, SSD1306_WHITE);
         display.setTextColor(SSD1306_BLACK);
       } else {
         display.setTextColor(SSD1306_WHITE);
       }
       
-      display.setCursor(x, y);
+      display.setCursor(x + x_offset, y);
       
       const char* key = currentKeyboard[row][col];
       
@@ -1809,8 +1843,6 @@ void drawKeyboard() {
       }
     }
   }
-  
-  display.display();
 }
 
 const char* getCurrentKey() {
@@ -1983,58 +2015,62 @@ void showLoadingAnimation() {
 }
 
 void showProgressBar(String title, int percent) {
-  display.clearDisplay();
+    progressBarTarget = percent;
 
-  display.setTextSize(1);
-  int titleW = title.length() * 6;
-  display.setCursor((SCREEN_WIDTH - titleW) / 2, 15);
-  display.print(title);
-
-  int barX = 10;
-  int barY = 30;
-  int barW = SCREEN_WIDTH - 20;
-  int barH = 14;
-
-  // Draw the outline
-  display.drawRect(barX, barY, barW, barH, SSD1306_WHITE);
-  
-  // Calculate the filled width
-  int fillW = map(percent, 0, 100, 0, barW - 2);
-  fillW = constrain(fillW, 0, barW - 2);
-
-  // Draw animated diagonal stripes
-  int stripeOffset = (millis() / 20) % 10; // Controls speed and spacing
-  for (int i = stripeOffset - barH; i < fillW; i += 10) {
-    int x1 = barX + 1 + i;
-    int y1 = barY + 1;
-    int x2 = barX + 1 + i + barH - 2;
-    int y2 = barY + barH - 1;
-
-    // Simple clipping for the line
-    int clippedX1 = max(barX + 1, x1);
-    int clippedY1 = y1 + (clippedX1 - x1);
-    int clippedX2 = min(barX + 1 + fillW, x2);
-    int clippedY2 = y2 - (x2 - clippedX2);
-
-    if (clippedX1 < clippedX2) {
-      display.drawLine(clippedX1, clippedY1, clippedX2, clippedY2, SSD1306_WHITE);
+    if (millis() - lastProgressBarUpdate > 20) {
+        if (progressBarCurrent < progressBarTarget) {
+            progressBarCurrent++;
+        } else if (progressBarCurrent > progressBarTarget) {
+            progressBarCurrent = progressBarTarget;
+        }
+        lastProgressBarUpdate = millis();
     }
-  }
 
-  // Percentage text in the center
-  String percentText = String(percent) + "%";
-  int textW = percentText.length() * 6;
-  int textX = barX + (barW - textW) / 2;
-  int textY = barY + 3;
+    display.clearDisplay();
+    display.setTextSize(1);
+    int titleW = title.length() * 6;
+    display.setCursor((SCREEN_WIDTH - titleW) / 2, 15);
+    display.print(title);
 
-  // Invert the area under the text for readability
-  display.fillRect(textX - 2, textY - 1, textW + 4, 10, SSD1306_WHITE);
-  display.setTextColor(SSD1306_BLACK);
-  display.setCursor(textX, textY);
-  display.print(percentText);
-  display.setTextColor(SSD1306_WHITE);
+    int barX = 10;
+    int barY = 30;
+    int barW = SCREEN_WIDTH - 20;
+    int barH = 14;
 
-  display.display();
+    display.drawRect(barX, barY, barW, barH, SSD1306_WHITE);
+
+    int fillW = map(progressBarCurrent, 0, 100, 0, barW - 2);
+    fillW = constrain(fillW, 0, barW - 2);
+
+    int stripeOffset = (millis() / 20) % 10;
+    for (int i = stripeOffset - barH; i < fillW; i += 10) {
+        int x1 = barX + 1 + i;
+        int y1 = barY + 1;
+        int x2 = barX + 1 + i + barH - 2;
+        int y2 = barY + barH - 1;
+
+        int clippedX1 = max(barX + 1, x1);
+        int clippedY1 = y1 + (clippedX1 - x1);
+        int clippedX2 = min(barX + 1 + fillW, x2);
+        int clippedY2 = y2 - (x2 - clippedX2);
+
+        if (clippedX1 < clippedX2) {
+            display.drawLine(clippedX1, clippedY1, clippedX2, clippedY2, SSD1306_WHITE);
+        }
+    }
+
+    String percentText = String(progressBarCurrent) + "%";
+    int textW = percentText.length() * 6;
+    int textX = barX + (barW - textW) / 2;
+    int textY = barY + 3;
+
+    display.fillRect(textX - 2, textY - 1, textW + 4, 10, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK);
+    display.setCursor(textX, textY);
+    display.print(percentText);
+    display.setTextColor(SSD1306_WHITE);
+
+    display.display();
 }
 
 void showStatus(String message, int delayMs) {
@@ -2079,89 +2115,89 @@ void showStatus(String message, int delayMs) {
   delay(delayMs);
 }
 
-void refreshCurrentScreen() {
+void refreshCurrentScreen(int x_offset = 0) {
   switch(currentState) {
     case STATE_MAIN_MENU:
-      showMainMenu();
+      showMainMenu(x_offset);
       break;
     case STATE_WIFI_MENU:
-      showWiFiMenu();
+      showWiFiMenu(x_offset);
       break;
     case STATE_WIFI_SCAN:
-      displayWiFiNetworks();
+      displayWiFiNetworks(x_offset);
       break;
     case STATE_CALCULATOR:
-      showCalculator();
+      showCalculator(x_offset);
       break;
     case STATE_POWER_BASE:
-      showPowerBase();
+      showPowerBase(x_offset);
       break;
     case STATE_POWER_VISUAL:
-      showPowerVisual();
+      showPowerVisual(x_offset);
       break;
     case STATE_POWER_STATS:
-      showPowerStats();
+      showPowerStats(x_offset);
       break;
     case STATE_POWER_GRAPH:
-      showPowerGraph();
+      showPowerGraph(x_offset);
       break;
     case STATE_POWER_CONSUMPTION:
-      showPowerConsumption();
+      showPowerConsumption(x_offset);
       break;
     case STATE_API_SELECT:
-      showAPISelect();
+      showAPISelect(x_offset);
       break;
     case STATE_SYSTEM_INFO:
-      showSystemInfo();
+      showSystemInfo(x_offset);
       break;
     case STATE_SETTINGS_MENU:
-      showSettingsMenu();
+      showSettingsMenu(x_offset);
       break;
     case STATE_DISPLAY_SETTINGS:
-      showDisplaySettings();
+      showDisplaySettings(x_offset);
       break;
     case STATE_DEVELOPER_MODE:
-      showDeveloperMode();
+      showDeveloperMode(x_offset);
       break;
     case STATE_BATTERY_GUARDIAN:
-      showBatteryGuardian();
+      showBatteryGuardian(x_offset);
       break;
     case STATE_ESP_NOW_MENU:
-      showESPNowMenu();
+      showESPNowMenu(x_offset);
       break;
     case STATE_ESP_NOW_SEND:
-      showESPNowSend();
+      showESPNowSend(x_offset);
       break;
     case STATE_ESP_NOW_INBOX:
-      showESPNowInbox();
+      showESPNowInbox(x_offset);
       break;
     case STATE_ESP_NOW_PEERS:
-      showESPNowPeers();
+      showESPNowPeers(x_offset);
       break;
     case STATE_ESP_NOW_ADD_PEER:
-      showESPNowAddPeer();
+      showESPNowAddPeer(x_offset);
       break;
     case STATE_ESP_NOW_RENAME_PEER:
-      showESPNowRenamePeer();
+      showESPNowRenamePeer(x_offset);
       break;
     case STATE_ESP_NOW_DELETE_PEER:
-      showESPNowDeletePeer();
+      showESPNowDeletePeer(x_offset);
       break;
     case STATE_ABOUT:
-      showAbout();
+      showAbout(x_offset);
       break;
     case STATE_SNAKE_GAME:
-      showSnakeGame();
+      showSnakeGame(x_offset);
       break;
     case STATE_PONG_GAME:
-      showPongGame();
+      showPongGame(x_offset);
       break;
     case STATE_KEYBOARD:
     case STATE_PASSWORD_INPUT:
-      drawKeyboard();
+      drawKeyboard(x_offset);
       break;
     case STATE_CHAT_RESPONSE:
-      displayResponse();
+      displayResponse(x_offset);
       break;
   }
 }
@@ -2193,26 +2229,26 @@ void updateBatteryLevel() {
   isCharging = (chargingVoltage > batteryVoltage + 0.3);
 }
 
-void drawBatteryIndicator() {
+void drawBatteryIndicator(int x_offset = 0) {
   int battX = SCREEN_WIDTH - 24;
   int battY = 1;
   int battWidth = 22;
   int battHeight = 8;
   
-  display.drawRect(battX, battY, battWidth, battHeight, SSD1306_WHITE);
-  display.fillRect(battX + battWidth, battY + 2, 2, battHeight - 4, SSD1306_WHITE);
+  display.drawRect(battX + x_offset, battY, battWidth, battHeight, SSD1306_WHITE);
+  display.fillRect(battX + battWidth + x_offset, battY + 2, 2, battHeight - 4, SSD1306_WHITE);
   
   int fillWidth = map(batteryPercent, 0, 100, 0, battWidth - 4);
   
   if (batteryPercent > 20) {
-    display.fillRect(battX + 2, battY + 2, fillWidth, battHeight - 4, SSD1306_WHITE);
+    display.fillRect(battX + 2 + x_offset, battY + 2, fillWidth, battHeight - 4, SSD1306_WHITE);
   } else if (batteryPercent > 10) {
     if ((millis() / 500) % 2 == 0) {
-      display.fillRect(battX + 2, battY + 2, fillWidth, battHeight - 4, SSD1306_WHITE);
+      display.fillRect(battX + 2 + x_offset, battY + 2, fillWidth, battHeight - 4, SSD1306_WHITE);
     }
   } else {
     if ((millis() / 250) % 2 == 0) {
-      display.fillRect(battX + 2, battY + 2, fillWidth, battHeight - 4, SSD1306_WHITE);
+      display.fillRect(battX + 2 + x_offset, battY + 2, fillWidth, battHeight - 4, SSD1306_WHITE);
     }
   }
   
@@ -2229,35 +2265,35 @@ void drawBatteryIndicator() {
     display.setTextColor(SSD1306_WHITE);
   }
   
-  display.setCursor(textX, textY);
+  display.setCursor(textX + x_offset, textY);
   display.print(batteryPercent);
   
   if (isCharging) {
-    drawChargingPlug();
+    drawChargingPlug(x_offset);
   }
   
   display.setTextColor(SSD1306_WHITE);
 }
 
-void drawChargingPlug() {
+void drawChargingPlug(int x_offset = 0) {
   int plugX = SCREEN_WIDTH - 35;
   int plugY = 2;
   
   int anim = (millis() / 200) % 2;
   
-  display.drawLine(plugX, plugY, plugX, plugY + 2 + anim, SSD1306_WHITE);
-  display.drawLine(plugX + 3, plugY, plugX + 3, plugY + 2 + anim, SSD1306_WHITE);
+  display.drawLine(plugX + x_offset, plugY, plugX + x_offset, plugY + 2 + anim, SSD1306_WHITE);
+  display.drawLine(plugX + 3 + x_offset, plugY, plugX + 3 + x_offset, plugY + 2 + anim, SSD1306_WHITE);
   
-  display.drawRect(plugX - 1, plugY + 2, 5, 4, SSD1306_WHITE);
-  display.drawLine(plugX + 1, plugY + 6, plugX + 1, plugY + 7, SSD1306_WHITE);
+  display.drawRect(plugX - 1 + x_offset, plugY + 2, 5, 4, SSD1306_WHITE);
+  display.drawLine(plugX + 1 + x_offset, plugY + 6, plugX + 1 + x_offset, plugY + 7, SSD1306_WHITE);
   
   if (anim == 1) {
-    display.drawPixel(plugX - 2, plugY + 4, SSD1306_WHITE);
-    display.drawPixel(plugX + 5, plugY + 3, SSD1306_WHITE);
+    display.drawPixel(plugX - 2 + x_offset, plugY + 4, SSD1306_WHITE);
+    display.drawPixel(plugX + 5 + x_offset, plugY + 3, SSD1306_WHITE);
   }
 }
 
-void drawWiFiSignalBars() {
+void drawWiFiSignalBars(int x_offset = 0) {
   int rssi = WiFi.RSSI();
   int bars = 0;
   
@@ -2272,9 +2308,9 @@ void drawWiFiSignalBars() {
   for (int i = 0; i < 4; i++) {
     int barHeight = (i + 1) * 2;
     if (i < bars) {
-      display.fillRect(x + i * 3, y + (8 - barHeight), 2, barHeight, SSD1306_WHITE);
+      display.fillRect(x + i * 3 + x_offset, y + (8 - barHeight), 2, barHeight, SSD1306_WHITE);
     } else {
-      display.drawRect(x + i * 3, y + (8 - barHeight), 2, barHeight, SSD1306_WHITE);
+      display.drawRect(x + i * 3 + x_offset, y + (8 - barHeight), 2, barHeight, SSD1306_WHITE);
     }
   }
 }
@@ -2568,27 +2604,21 @@ void handleSelect() {
         case 0: // Send Message
           if (peerCount > 0) {
             selectedPeer = 0;
-            currentState = STATE_ESP_NOW_SEND;
-            showESPNowSend();
+            changeState(STATE_ESP_NOW_SEND, TRANS_SLIDE_LEFT);
           } else {
             showStatus("No peers!\nAdd via Manage Peers", 2000);
-            showESPNowMenu();
           }
           break;
         case 1: // Inbox
-          currentState = STATE_ESP_NOW_INBOX;
           menuSelection = 0;
-          showESPNowInbox();
+          changeState(STATE_ESP_NOW_INBOX, TRANS_SLIDE_LEFT);
           break;
         case 2: // Manage Peers
-          currentState = STATE_ESP_NOW_PEERS;
           menuSelection = 0;
-          showESPNowPeers();
+          changeState(STATE_ESP_NOW_PEERS, TRANS_SLIDE_LEFT);
           break;
         case 3: // Back
-          currentState = STATE_MAIN_MENU;
-          menuSelection = 0;
-          showMainMenu();
+          changeState(STATE_MAIN_MENU, TRANS_SLIDE_RIGHT);
           break;
       }
       break;
@@ -2629,43 +2659,33 @@ void handleSelect() {
       switch(menuSelection) {
         case 0: // Add New Peer
           if (peerCount < MAX_ESP_PEERS) {
-            previousState = STATE_ESP_NOW_ADD_PEER;
-            currentState = STATE_ESP_NOW_ADD_PEER;
             macInput = "";
             peerNameInput = "";
             userInput = "";
-            showESPNowAddPeer();
+            changeState(STATE_ESP_NOW_ADD_PEER, TRANS_SLIDE_LEFT);
           } else {
             showStatus("Peer list full!", 1500);
-            showESPNowPeers();
           }
           break;
         case 1: // Rename Peer
           if (peerCount > 0) {
-            previousState = STATE_ESP_NOW_RENAME_PEER;
-            currentState = STATE_ESP_NOW_RENAME_PEER;
             selectedPeer = 0;
-            showESPNowRenamePeer();
+            changeState(STATE_ESP_NOW_RENAME_PEER, TRANS_SLIDE_LEFT);
           } else {
             showStatus("No peers to rename!", 1500);
-            showESPNowPeers();
           }
           break;
         case 2: // Delete Peer
           if (peerCount > 0) {
-            previousState = currentState;
-            currentState = STATE_ESP_NOW_DELETE_PEER;
             selectedPeer = 0;
-            showESPNowDeletePeer();
+            changeState(STATE_ESP_NOW_DELETE_PEER, TRANS_SLIDE_LEFT);
           } else {
             showStatus("No peers to delete!", 1500);
-            showESPNowPeers();
           }
           break;
         case 3: // Back
-          currentState = STATE_ESP_NOW_MENU;
           menuSelection = 0;
-          showESPNowMenu();
+          changeState(STATE_ESP_NOW_MENU, TRANS_SLIDE_RIGHT);
           break;
       }
       break;
@@ -3436,15 +3456,11 @@ void handleSettingsMenuSelect() {
       showSettingsMenu();
       break;
     case 1:
-      previousState = currentState;
-      currentState = STATE_DISPLAY_SETTINGS;
       menuSelection = 0;
-      showDisplaySettings();
+      changeState(STATE_DISPLAY_SETTINGS, TRANS_SLIDE_LEFT);
       break;
     case 2:
-      previousState = currentState;
-      currentState = STATE_SYSTEM_INFO;
-      showSystemInfo();
+      changeState(STATE_SYSTEM_INFO, TRANS_SLIDE_LEFT);
       break;
     case 3:
       devModeEnabled = !devModeEnabled;
@@ -3454,8 +3470,7 @@ void handleSettingsMenuSelect() {
       ledSuccess();
       if (devModeEnabled) {
         showStatus("Developer Mode\nENABLED", 1500);
-        currentState = STATE_DEVELOPER_MODE;
-        showDeveloperMode();
+        changeState(STATE_DEVELOPER_MODE, TRANS_SLIDE_LEFT);
       } else {
         showStatus("Developer Mode\nDISABLED", 1500);
         showSettingsMenu();
@@ -3465,18 +3480,15 @@ void handleSettingsMenuSelect() {
       enterZenMode();
       break;
     case 5:
-      currentState = STATE_MAIN_MENU;
-      menuSelection = 0;
-      showMainMenu();
+      changeState(STATE_MAIN_MENU, TRANS_SLIDE_RIGHT);
       break;
   }
 }
 
 // ========== ABOUT PAGE ==========
 
-void showAbout() {
-  display.clearDisplay();
-  drawBatteryIndicator();
+void showAbout(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
   
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -3533,7 +3545,7 @@ void showAbout() {
       if (y >= -lineHeight && y < SCREEN_HEIGHT) {
         int textWidth = line.length() * 6;
         int x = (SCREEN_WIDTH - textWidth) / 2; // Center text
-        display.setCursor(x, y);
+        display.setCursor(x + x_offset, y);
         display.print(line);
       }
       
@@ -3546,7 +3558,7 @@ void showAbout() {
   
   // Scroll indicator
   if (scrollOffset > 0) {
-    display.fillTriangle(SCREEN_WIDTH - 8, 2, SCREEN_WIDTH - 4, 2, SCREEN_WIDTH - 6, 5, SSD1306_WHITE);
+    display.fillTriangle(SCREEN_WIDTH - 8 + x_offset, 2, SCREEN_WIDTH - 4 + x_offset, 2, SCREEN_WIDTH - 6 + x_offset, 5, SSD1306_WHITE);
   }
   
   // Calculate max scroll
@@ -3557,16 +3569,14 @@ void showAbout() {
   int maxScroll = (totalLines * lineHeight) - SCREEN_HEIGHT + 12;
   
   if (scrollOffset < maxScroll) {
-    display.fillTriangle(SCREEN_WIDTH - 8, SCREEN_HEIGHT - 5, SCREEN_WIDTH - 4, SCREEN_HEIGHT - 5, 
-                        SCREEN_WIDTH - 6, SCREEN_HEIGHT - 2, SSD1306_WHITE);
+    display.fillTriangle(SCREEN_WIDTH - 8 + x_offset, SCREEN_HEIGHT - 5, SCREEN_WIDTH - 4 + x_offset, SCREEN_HEIGHT - 5,
+                        SCREEN_WIDTH - 6 + x_offset, SCREEN_HEIGHT - 2, SSD1306_WHITE);
   }
-  
-  display.display();
 }
 
 // ========== BREADCRUMB NAVIGATION ==========
 
-void drawBreadcrumb() {
+void drawBreadcrumb(int x_offset = 0) {
   String crumb = "";
   
   switch(currentState) {
@@ -3617,16 +3627,18 @@ void drawBreadcrumb() {
     default:
       crumb = "";
   }
+  display.setCursor(2 + x_offset, 2);
+  display.print(crumb);
 }
 
 // ========== ICON DRAWING ==========
 
-void drawIcon(int x, int y, const unsigned char* icon) {
+void drawIcon(int x, int y, const unsigned char* icon, int x_offset = 0) {
   for (int i = 0; i < 8; i++) {
     byte row = pgm_read_byte(&icon[i]);
     for (int j = 0; j < 8; j++) {
       if (row & (1 << (7 - j))) {
-        display.drawPixel(x + j, y + i, SSD1306_WHITE);
+        display.drawPixel(x + j + x_offset, y + i, SSD1306_WHITE);
       }
     }
   }
@@ -3634,12 +3646,11 @@ void drawIcon(int x, int y, const unsigned char* icon) {
 
 // ========== MAIN MENU WITH ICONS ==========
 
-void showMainMenu() {
-  display.clearDisplay();
-  drawBatteryIndicator();
+void showMainMenu(int x_offset = 0) {
+  drawBatteryIndicator(x_offset);
 
   if (WiFi.status() == WL_CONNECTED) {
-    drawWiFiSignalBars();
+    drawWiFiSignalBars(x_offset);
   }
 
   int itemCount = 10;
@@ -3662,17 +3673,14 @@ void showMainMenu() {
     // --- Visual Flair ---
     if (i == menuSelection) {
       // Draw a selector bar behind the selected item
-      display.fillRoundRect(5, itemTopY - 3, SCREEN_WIDTH - 10, blockHeight + 6, 3, SSD1306_WHITE);
+      display.fillRoundRect(5 + x_offset, itemTopY - 3, SCREEN_WIDTH - 10, blockHeight + 6, 3, SSD1306_WHITE);
       display.setTextColor(SSD1306_BLACK); // Text on top of selector is black
     } else {
       display.setTextColor(SSD1306_WHITE);
     }
 
     // --- Draw Icon and Text ---
-    drawIcon(10, itemTopY, menuItems[i].icon);
-
-    // --- Draw Icon and Text ---
-    drawIcon(10, itemTopY, menuItems[i].icon);
+    drawIcon(10, itemTopY, menuItems[i].icon, x_offset);
 
     if (i == menuSelection) {
       display.setTextSize(2);
@@ -3680,13 +3688,13 @@ void showMainMenu() {
       int availableWidth = SCREEN_WIDTH - 35;
 
       if (textWidth > availableWidth) {
-        display.setCursor(25 - menuTextScrollX, itemTopY);
+        display.setCursor(25 - menuTextScrollX + x_offset, itemTopY);
       } else {
-        display.setCursor(25, itemTopY);
+        display.setCursor(25 + x_offset, itemTopY);
       }
     } else {
       display.setTextSize(1);
-      display.setCursor(25, itemTopY);
+      display.setCursor(25 + x_offset, itemTopY);
     }
     display.print(menuItems[i].text);
   }
@@ -3725,71 +3733,54 @@ void updateMainMenu() {
 }
 
 void handleMainMenuSelect() {
+  TransitionType navTransition = TRANS_SLIDE_LEFT;
+
   switch(menuSelection) {
     case 0: // Chat AI
       if (WiFi.status() == WL_CONNECTED) {
         menuSelection = 0;
-        previousState = currentState;
-        currentState = STATE_API_SELECT;
-        showAPISelect();
+        changeState(STATE_API_SELECT, navTransition);
       } else {
         ledError();
         showStatus("WiFi not connected!\nGo to WiFi Settings", 2000);
-        showMainMenu();
       }
       break;
     case 1: // WiFi
       menuSelection = 0;
-      previousState = currentState;
-      currentState = STATE_WIFI_MENU;
-      showWiFiMenu();
+      changeState(STATE_WIFI_MENU, navTransition);
       break;
     case 2: // Calculator
       resetCalculator();
-      previousState = currentState;
-      currentState = STATE_CALCULATOR;
       cursorX = 0;
       cursorY = 0;
-      showCalculator();
+      changeState(STATE_CALCULATOR, navTransition);
       break;
     case 3: // Power
       powerMenuSelection = 0;
-      previousState = currentState;
-      currentState = STATE_POWER_BASE;
-      showPowerBase();
+      changeState(STATE_POWER_BASE, navTransition);
       break;
     case 4: // Battery Guardian
-      previousState = currentState;
-      currentState = STATE_BATTERY_GUARDIAN;
-      showBatteryGuardian();
+      changeState(STATE_BATTERY_GUARDIAN, navTransition);
       break;
     case 5: // ESP-NOW
       menuSelection = 0;
-      previousState = currentState;
-      currentState = STATE_ESP_NOW_MENU;
-      showESPNowMenu();
+      changeState(STATE_ESP_NOW_MENU, navTransition);
       break;
     case 6: // Settings
       settingsMenuSelection = 0;
-      previousState = currentState;
-      currentState = STATE_SETTINGS_MENU;
-      showSettingsMenu();
+      changeState(STATE_SETTINGS_MENU, navTransition);
       break;
     case 7: // Snake Game
-      previousState = currentState;
-      currentState = STATE_SNAKE_GAME;
       initSnakeGame();
+      changeState(STATE_SNAKE_GAME, navTransition);
       break;
     case 8: // Pong Game
-      previousState = currentState;
-      currentState = STATE_PONG_GAME;
       initPongGame();
+      changeState(STATE_PONG_GAME, navTransition);
       break;
     case 9: // About
-      previousState = currentState;
-      currentState = STATE_ABOUT;
       scrollOffset = 0;
-      showAbout();
+      changeState(STATE_ABOUT, navTransition);
       break;
   }
 }
@@ -3798,9 +3789,11 @@ void handleMainMenuSelect() {
 
 void handleBackButton() {
   ledQuickFlash();
-  
+  TransitionType backTransition = TRANS_SLIDE_RIGHT;
+
   switch(currentState) {
     case STATE_MAIN_MENU:
+      // No action
       break;
       
     case STATE_WIFI_MENU:
@@ -3810,85 +3803,64 @@ void handleBackButton() {
     case STATE_BATTERY_GUARDIAN:
     case STATE_ESP_NOW_MENU:
     case STATE_ABOUT:
-      currentState = STATE_MAIN_MENU;
       menuSelection = 0;
-      showMainMenu();
+      changeState(STATE_MAIN_MENU, backTransition);
       break;
       
     case STATE_WIFI_SCAN:
     case STATE_PASSWORD_INPUT:
-      currentState = STATE_WIFI_MENU;
       menuSelection = 0;
-      showWiFiMenu();
+      changeState(STATE_WIFI_MENU, backTransition);
       break;
       
     case STATE_POWER_VISUAL:
     case STATE_POWER_STATS:
     case STATE_POWER_GRAPH:
     case STATE_POWER_CONSUMPTION:
-      currentState = STATE_POWER_BASE;
       powerMenuSelection = 0;
-      showPowerBase();
+      changeState(STATE_POWER_BASE, backTransition);
       break;
       
     case STATE_DISPLAY_SETTINGS:
     case STATE_SYSTEM_INFO:
     case STATE_DEVELOPER_MODE:
-      currentState = STATE_SETTINGS_MENU;
       settingsMenuSelection = 0;
-      showSettingsMenu();
+      changeState(STATE_SETTINGS_MENU, backTransition);
       break;
       
     case STATE_ESP_NOW_SEND:
     case STATE_ESP_NOW_INBOX:
     case STATE_ESP_NOW_PEERS:
-      currentState = STATE_ESP_NOW_MENU;
       menuSelection = 0;
-      showESPNowMenu();
+      changeState(STATE_ESP_NOW_MENU, backTransition);
       break;
       
     case STATE_ESP_NOW_ADD_PEER:
     case STATE_ESP_NOW_RENAME_PEER:
     case STATE_ESP_NOW_DELETE_PEER:
-      currentState = STATE_ESP_NOW_PEERS;
       menuSelection = 0;
-      showESPNowPeers();
+      changeState(STATE_ESP_NOW_PEERS, backTransition);
       break;
       
     case STATE_KEYBOARD:
-      if (previousState == STATE_ESP_NOW_ADD_PEER) {
-        currentState = STATE_ESP_NOW_ADD_PEER;
-        userInput = "";
-        macInput = "";
-        peerNameInput = "";
-        showESPNowAddPeer();
-      } else if (previousState == STATE_ESP_NOW_RENAME_PEER) {
-        currentState = STATE_ESP_NOW_RENAME_PEER;
-        userInput = "";
-        peerNameInput = "";
-        showESPNowRenamePeer();
-      } else {
-        currentState = STATE_MAIN_MENU;
-        menuSelection = 0;
-        userInput = "";
-        aiResponse = "";
-        showMainMenu();
-      }
+      userInput = "";
+      macInput = "";
+      peerNameInput = "";
+      aiResponse = "";
+      changeState(previousState, backTransition);
       break;
       
     case STATE_API_SELECT:
     case STATE_CHAT_RESPONSE:
-      currentState = STATE_MAIN_MENU;
       menuSelection = 0;
       userInput = "";
       aiResponse = "";
-      showMainMenu();
+      changeState(STATE_MAIN_MENU, backTransition);
       break;
       
     default:
-      currentState = STATE_MAIN_MENU;
       menuSelection = 0;
-      showMainMenu();
+      changeState(STATE_MAIN_MENU, backTransition);
       break;
   }
 }
@@ -3930,29 +3902,21 @@ void showPowerBase() {
 }
 
 void handlePowerBaseSelect() {
-  previousState = currentState;
-  
   switch(powerMenuSelection) {
     case 0:
-      currentState = STATE_POWER_VISUAL;
-      showPowerVisual();
+      changeState(STATE_POWER_VISUAL, TRANS_SLIDE_LEFT);
       break;
     case 1:
-      currentState = STATE_POWER_STATS;
-      showPowerStats();
+      changeState(STATE_POWER_STATS, TRANS_SLIDE_LEFT);
       break;
     case 2:
-      currentState = STATE_POWER_GRAPH;
-      showPowerGraph();
+      changeState(STATE_POWER_GRAPH, TRANS_SLIDE_LEFT);
       break;
     case 3:
-      currentState = STATE_POWER_CONSUMPTION;
-      showPowerConsumption();
+      changeState(STATE_POWER_CONSUMPTION, TRANS_SLIDE_LEFT);
       break;
     case 4:
-      currentState = STATE_MAIN_MENU;
-      menuSelection = 0;
-      showMainMenu();
+      changeState(STATE_MAIN_MENU, TRANS_SLIDE_RIGHT);
       break;
   }
 }

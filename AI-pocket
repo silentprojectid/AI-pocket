@@ -227,6 +227,9 @@ int settingsMenuSelection = 0;
 // Main Menu animation
 float menuScrollY = 0;
 float menuTargetScrollY = 0;
+float menuTextScrollX = 0;
+unsigned long lastMenuTextScrollTime = 0;
+const int menuTextScrollSpeed = 150; // ms delay
 
 // Snake Game
 #define SNAKE_WIDTH 16
@@ -305,6 +308,24 @@ const unsigned char ICON_PONG[] PROGMEM = {
 // Forward declarations
 void showMainMenu();
 void updateMainMenu();
+
+struct MenuItem {
+  const char* text;
+  const unsigned char* icon;
+};
+
+MenuItem menuItems[] = {
+  {"Chat AI", ICON_CHAT},
+  {"WiFi", ICON_WIFI},
+  {"Calculator", ICON_CALC},
+  {"Power", ICON_POWER},
+  {"Battery Guard", ICON_BATTERY_GUARD},
+  {"ESP-NOW", ICON_MESSAGE},
+  {"Settings", ICON_SETTINGS},
+  {"Snake Game", ICON_SNAKE},
+  {"Pong Game", ICON_PONG},
+  {"About", ICON_DEV}
+};
 void showWiFiMenu();
 void showCalculator();
 void showPowerBase();
@@ -2265,6 +2286,8 @@ void handleUp() {
     case STATE_MAIN_MENU:
       menuSelection = (menuSelection - 1 + 10) % 10;
       menuTargetScrollY = menuSelection * 22;
+      menuTextScrollX = 0; // Reset text scroll
+      lastMenuTextScrollTime = millis();
       break;
     case STATE_WIFI_MENU:
       menuSelection = (menuSelection - 1 + 3) % 3;
@@ -2350,6 +2373,8 @@ void handleDown() {
     case STATE_MAIN_MENU:
       menuSelection = (menuSelection + 1) % 10;
       menuTargetScrollY = menuSelection * 22;
+      menuTextScrollX = 0; // Reset text scroll
+      lastMenuTextScrollTime = millis();
       break;
     case STATE_WIFI_MENU:
       menuSelection = (menuSelection + 1) % 3;
@@ -3617,24 +3642,6 @@ void showMainMenu() {
     drawWiFiSignalBars();
   }
 
-  struct MenuItem {
-    const char* text;
-    const unsigned char* icon;
-  };
-
-  MenuItem menuItems[] = {
-    {"Chat AI", ICON_CHAT},
-    {"WiFi", ICON_WIFI},
-    {"Calculator", ICON_CALC},
-    {"Power", ICON_POWER},
-    {"Battery Guard", ICON_BATTERY_GUARD},
-    {"ESP-NOW", ICON_MESSAGE},
-    {"Settings", ICON_SETTINGS},
-    {"Snake Game", ICON_SNAKE},
-    {"Pong Game", ICON_PONG},
-    {"About", ICON_DEV}
-  };
-
   int itemCount = 10;
   int itemHeight = 22; // Increased spacing to fix overlap
   int halfScreen = SCREEN_HEIGHT / 2;
@@ -3664,9 +3671,19 @@ void showMainMenu() {
     // --- Draw Icon and Text ---
     drawIcon(10, itemTopY, menuItems[i].icon);
 
+    // --- Draw Icon and Text ---
+    drawIcon(10, itemTopY, menuItems[i].icon);
+
     if (i == menuSelection) {
       display.setTextSize(2);
-      display.setCursor(25, itemTopY);
+      int textWidth = String(menuItems[i].text).length() * 12; // Size 2 font width approx 12
+      int availableWidth = SCREEN_WIDTH - 35;
+
+      if (textWidth > availableWidth) {
+        display.setCursor(25 - menuTextScrollX, itemTopY);
+      } else {
+        display.setCursor(25, itemTopY);
+      }
     } else {
       display.setTextSize(1);
       display.setCursor(25, itemTopY);
@@ -3685,6 +3702,23 @@ void updateMainMenu() {
 
   if (abs(menuTargetScrollY - menuScrollY) < 0.1) {
     menuScrollY = menuTargetScrollY;
+  }
+
+  // Text scrolling logic
+  if (millis() - lastMenuTextScrollTime > menuTextScrollSpeed) {
+    const char* selectedText = menuItems[menuSelection].text;
+    int textWidth = String(selectedText).length() * 12;
+    int availableWidth = SCREEN_WIDTH - 35;
+
+    if (textWidth > availableWidth) {
+      menuTextScrollX++;
+      if (menuTextScrollX > textWidth) {
+        menuTextScrollX = 0;
+      }
+    } else {
+      menuTextScrollX = 0;
+    }
+    lastMenuTextScrollTime = millis();
   }
 
   showMainMenu();

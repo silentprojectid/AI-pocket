@@ -188,6 +188,7 @@ enum AppState {
   STATE_ESP_NOW_SEND,
   STATE_ESP_NOW_INBOX,
   STATE_ESP_NOW_PEERS,
+  STATE_ESP_NOW_ADD_PEER, // New state for MAC address input
   STATE_LOADING
 };
 
@@ -277,6 +278,7 @@ void handleAPISelectSelect();
 void handleSettingsMenuSelect();
 void handleKeyPress();
 void handlePasswordKeyPress();
+void handleMacAddressKeyPress();
 void handleCalculatorInput();
 void handleBackButton();
 void connectToWiFi(String ssid, String password);
@@ -343,6 +345,53 @@ void ledSuccess() {
     delay(100);
     digitalWrite(LED_BUILTIN, LOW);
     delay(100);
+  }
+}
+
+void handleMacAddressKeyPress() {
+  const char* key = getCurrentKey();
+  String mac = userInput;
+
+  if (strcmp(key, "OK") == 0) {
+    if (mac.length() == 17) {
+      uint8_t macAddr[6];
+      int MacValue[6];
+      if (sscanf(mac.c_str(), "%x:%x:%x:%x:%x:%x", &MacValue[0], &MacValue[1], &MacValue[2], &MacValue[3], &MacValue[4], &MacValue[5]) == 6) {
+        for(int i = 0; i < 6; ++i) macAddr[i] = (uint8_t)MacValue[i];
+        addPeer(macAddr);
+        showStatus("Peer added!", 1500);
+        currentState = STATE_ESP_NOW_PEERS;
+        menuSelection = 0;
+        showESPNowPeers();
+      } else {
+        showStatus("Invalid MAC format!", 2000);
+        drawKeyboard();
+      }
+    } else {
+      showStatus("MAC too short!", 2000);
+      drawKeyboard();
+    }
+  } else if (strcmp(key, "<") == 0) {
+    if (mac.length() > 0) {
+      if (mac.endsWith(":")) {
+        userInput.remove(userInput.length() - 2);
+      } else {
+        userInput.remove(userInput.length() - 1);
+      }
+    }
+    drawKeyboard();
+  } else if (strcmp(key, "#") == 0) {
+    toggleKeyboardMode();
+    drawKeyboard();
+  } else if (mac.length() < 17) {
+    userInput += key;
+    if (userInput.length() == 2 || userInput.length() == 5 || userInput.length() == 8 || userInput.length() == 11 || userInput.length() == 14) {
+      userInput += ":";
+    }
+    if (currentKeyboardMode == MODE_UPPER) {
+      currentKeyboardMode = MODE_LOWER;
+    }
+    drawKeyboard();
   }
 }
 
@@ -851,35 +900,45 @@ void showESPNowPeers() {
   display.clearDisplay();
   drawBatteryIndicator();
   drawBreadcrumb();
-  
+
   display.setTextSize(1);
   display.setCursor(20, 2);
   display.print("MANAGE PEERS");
-  
+
   display.drawLine(0, 12, SCREEN_WIDTH, 12, SSD1306_WHITE);
-  
-  display.setCursor(5, 15);
-  display.print("Peers: ");
-  display.print(peerCount);
-  display.print("/");
-  display.print(MAX_ESP_PEERS);
-  
-  if (peerCount == 0) {
-    display.setCursor(5, 30);
-    display.print("Add peer MAC addr");
-    display.setCursor(5, 40);
-    display.print("via Serial console");
-  } else {
-    for (int i = 0; i < min(peerCount, 3); i++) {
-      display.setCursor(5, 28 + i * 10);
-      display.printf("%d. %02X:%02X:%02X:%02X:%02X:%02X",
+
+  // Display existing peers
+  if (peerCount > 0) {
+    for (int i = 0; i < peerCount; i++) {
+      int y = 15 + i * 9;
+      display.setCursor(2, y);
+      display.printf("%d: %02X:%02X:%02X:%02X:%02X:%02X",
                     i + 1,
                     peerAddresses[i][0], peerAddresses[i][1],
                     peerAddresses[i][2], peerAddresses[i][3],
                     peerAddresses[i][4], peerAddresses[i][5]);
     }
+  } else {
+    display.setCursor(30, 25);
+    display.print("No peers found");
   }
-  
+
+  // Draw menu options
+  const char* menuItems[] = {"Add Peer", "Back"};
+  int menuY = 45;
+  display.drawLine(0, menuY - 4, SCREEN_WIDTH, menuY - 4, SSD1306_WHITE);
+
+  for (int i = 0; i < 2; i++) {
+    int y = menuY + i * 10;
+    display.setCursor(5, y);
+    if (i == menuSelection) {
+      display.print("> ");
+    } else {
+      display.print("  ");
+    }
+    display.print(menuItems[i]);
+  }
+
   display.display();
 }
 
@@ -1550,7 +1609,7 @@ void showMainMenu() {
         display.getTextBounds(menuItems[i].text, 0, 0, &x1, &y1, &w, &h);
 
         if (w > SCREEN_WIDTH - 30) {
-            if (millis() - lastMenuTextScrollTime > 30) {
+            if (millis() - lastMenuTextScrollTime > 15) {
                 menuTextScrollX--;
                 // To create a seamless loop, when the second text instance reaches the starting
                 // position of the first, we effectively reset the scroll position by adding
@@ -1690,12 +1749,40 @@ void handleBackButton() {
     case STATE_ESP_NOW_SEND:
     case STATE_ESP_NOW_INBOX:
     case STATE_ESP_NOW_PEERS:
-      currentState = STATE_ESP_NOW_MENU;
-      menuSelection = 0;
-      showESPNowMenu();
+      if (menuSelection == 0) { // Add Peer
+        if (peerCount < MAX_ESP_PEERS) {
+          previousState = currentState;
+          currentState = STATE_ESP_NOW_ADD_PEER; // Set state for MAC input
+          userInput = ""; // Clear userInput for the MAC address
+          cursorX = 0;
+          cursorY = 0;
+          currentKeyboardMode = MODE_UPPER; // Start with upper for MAC addresses
+          drawKeyboard();
+        } else {
+          showStatus("Peer list is full!", 2000);
+          showESPNowPeers();
+        }
+      } else { // Back
+        currentState = STATE_ESP_NOW_MENU;
+        menuSelection = 0;
+        showESPNowMenu();
+      }
       break;
       
     case STATE_KEYBOARD:
+    case STATE_ESP_NOW_ADD_PEER:
+      if (previousState == STATE_ESP_NOW_PEERS) {
+        currentState = STATE_ESP_NOW_PEERS;
+        menuSelection = 0;
+        showESPNowPeers();
+      } else {
+        currentState = STATE_MAIN_MENU;
+        menuSelection = 0;
+        userInput = "";
+        aiResponse = "";
+        showMainMenu();
+      }
+      break;
     case STATE_API_SELECT:
     case STATE_CHAT_RESPONSE:
       currentState = STATE_MAIN_MENU;
@@ -2289,6 +2376,9 @@ void drawKeyboard() {
     }
     String displayText = masked.substring(max(0, (int)masked.length() - 10));
     display.print(displayText);
+  } else if (currentState == STATE_ESP_NOW_ADD_PEER) {
+    display.print("MAC:");
+    display.print(userInput);
   } else {
     display.print(">");
     String displayText = userInput.substring(max(0, (int)userInput.length() - 14));
@@ -2923,6 +3013,10 @@ void handleUp() {
         showESPNowInbox();
       }
       break;
+    case STATE_ESP_NOW_PEERS:
+      menuSelection = (menuSelection - 1 + 2) % 2;
+      showESPNowPeers();
+      break;
     case STATE_WIFI_SCAN:
       if (networkCount > 0) {
         selectedNetwork = (selectedNetwork - 1 + networkCount) % networkCount;
@@ -3194,6 +3288,9 @@ void handleSelect() {
       break;
     case STATE_PASSWORD_INPUT:
       handlePasswordKeyPress();
+      break;
+    case STATE_ESP_NOW_ADD_PEER:
+      handleMacAddressKeyPress();
       break;
     case STATE_CHAT_RESPONSE:
       currentState = STATE_MAIN_MENU;

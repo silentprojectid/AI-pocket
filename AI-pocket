@@ -1428,10 +1428,8 @@ void connectToWiFi(String ssid, String password) {
     
     lastWiFiActivity = millis();
     
-    currentState = STATE_MAIN_MENU;
-    menuSelection = mainMenuSelection;
     menuTargetScrollY = mainMenuSelection * 22;
-    showMainMenu();
+    changeState(STATE_MAIN_MENU, TRANS_SLIDE_RIGHT);
   } else {
     ledError();
     showStatus("Connection failed!", 2000);
@@ -2747,20 +2745,16 @@ void handleSelect() {
       handlePasswordKeyPress();
       break;
     case STATE_CHAT_RESPONSE:
-      currentState = STATE_MAIN_MENU;
-      menuSelection = mainMenuSelection;
       menuTargetScrollY = mainMenuSelection * 22;
       userInput = "";
       aiResponse = "";
       scrollOffset = 0;
-      showMainMenu();
+      changeState(STATE_MAIN_MENU, TRANS_SLIDE_RIGHT);
       break;
     case STATE_ABOUT:
-      currentState = STATE_MAIN_MENU;
-      menuSelection = mainMenuSelection;
       menuTargetScrollY = mainMenuSelection * 22;
       scrollOffset = 0;
-      showMainMenu();
+      changeState(STATE_MAIN_MENU, TRANS_SLIDE_RIGHT);
       break;
     case STATE_SNAKE_GAME:
       if (gameOver) {
@@ -3808,7 +3802,6 @@ void handleBackButton() {
     case STATE_BATTERY_GUARDIAN:
     case STATE_ESP_NOW_MENU:
     case STATE_ABOUT:
-      menuSelection = mainMenuSelection;
       menuTargetScrollY = mainMenuSelection * 22;
       changeState(STATE_MAIN_MENU, backTransition);
       break;
@@ -3858,7 +3851,6 @@ void handleBackButton() {
       
     case STATE_API_SELECT:
     case STATE_CHAT_RESPONSE:
-      menuSelection = mainMenuSelection;
       menuTargetScrollY = mainMenuSelection * 22;
       userInput = "";
       aiResponse = "";
@@ -3866,7 +3858,6 @@ void handleBackButton() {
       break;
       
     default:
-      menuSelection = mainMenuSelection;
       menuTargetScrollY = mainMenuSelection * 22;
       changeState(STATE_MAIN_MENU, backTransition);
       break;

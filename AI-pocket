@@ -375,7 +375,7 @@ void updateSnakeGame();
 void initPongGame();
 void showPongGame(int x_offset = 0);
 void updatePongGame();
-void showLoadingAnimation();
+void showLoadingAnimation(int x_offset = 0);
 void showProgressBar(String title, int percent);
 void displayWiFiNetworks(int x_offset = 0);
 void drawKeyboard(int x_offset = 0);

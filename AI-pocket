@@ -1542,6 +1542,7 @@ void showMainMenu() {
         drawIcon(8, screenCenterY - 4, menuItems[i].icon);
 
         display.setTextSize(2);
+        display.setTextWrap(false); // Disable text wrap for marquee
 
         // Marquee effect for long text
         int16_t x1, y1;
@@ -1565,6 +1566,7 @@ void showMainMenu() {
             display.print(menuItems[i].text);
         }
 
+        display.setTextWrap(true); // Re-enable text wrap
       } else {
         // --- UNSELECTED ITEMS ---
         display.setTextSize(1);

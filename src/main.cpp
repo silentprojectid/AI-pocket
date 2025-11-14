@@ -2070,6 +2070,9 @@ void handlePowerBaseSelect() {
       menuTargetScrollY = mainMenuSelection * 22;
       showMainMenu();
       break;
+    case STATE_OTA_UPDATE:
+      performOTAUpdate();
+      break;
   }
 }
 

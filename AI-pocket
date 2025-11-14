@@ -244,9 +244,9 @@ int powerMenuSelection = 0;
 int settingsMenuSelection = 0;
 
 // Keyboard text scrolling variables
-int textInputScrollOffset = 0;
+float keyboardTextScrollX = 0;
 unsigned long lastTextInputUpdate = 0;
-const int textInputScrollSpeed = 150;
+const int textInputScrollSpeed = 20; // Speed for marquee scroll
 
 // Icons (8x8 pixel bitmaps)
 const unsigned char ICON_WIFI[] PROGMEM = {
@@ -459,7 +459,7 @@ void handleMacAddressKeyPress() {
       } else {
         userInput.remove(userInput.length() - 1);
       }
-      textInputScrollOffset = 0; // Reset scroll on backspace
+      keyboardTextScrollX = 0; // Reset scroll on backspace
     }
     drawKeyboard();
   } else if (strcmp(key, "#") == 0) {
@@ -481,7 +481,7 @@ void handleMacAddressKeyPress() {
           userInput += ":";
         }
         
-        textInputScrollOffset = 0; // Reset scroll on new input
+        keyboardTextScrollX = 0; // Reset scroll on new input
       }
     }
     drawKeyboard();
@@ -708,33 +708,6 @@ void loop() {
     }
   }
   
-  // NEW: Update keyboard text scrolling animation
-  if (currentState == STATE_KEYBOARD || currentState == STATE_PASSWORD_INPUT) {
-    int maxChars = 0;
-    String text = "";
-    
-    if (keyboardContext == CONTEXT_WIFI_PASSWORD) {
-      String masked = "";
-      for (unsigned int i = 0; i < passwordInput.length(); i++) {
-        masked += "*";
-      }
-      text = masked;
-      maxChars = 14;
-    } else if (keyboardContext == CONTEXT_ESPNOW_MAC) {
-      text = userInput;
-      maxChars = 13;
-    } else {
-      text = userInput;
-      maxChars = 17;
-    }
-    
-    if (text.length() > maxChars) {
-      if (currentMillis - lastTextInputUpdate > textInputScrollSpeed) {
-        drawKeyboard(); // Redraw to update scroll position
-      }
-    }
-  }
-
   // Main Menu Animation Logic
   if (currentState == STATE_MAIN_MENU) {
     if (abs(menuScrollY - menuTargetScrollY) > 0.1) {
@@ -2594,8 +2567,6 @@ void handleAPISelectSelect() {
   drawKeyboard();
 }
 
-// ========== KEYBOARD FUNCTIONS ==========
-
 void drawKeyboard() {
   display.clearDisplay();
   drawBatteryIndicator();
@@ -2603,77 +2574,56 @@ void drawKeyboard() {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   
-  // NEW: Calculate text display with scrolling
   String displayText = "";
-  int maxVisibleChars = 0;
   int prefixWidth = 0;
   
   if (keyboardContext == CONTEXT_WIFI_PASSWORD) {
     display.setCursor(0, 0);
     display.print("Pass:");
-    prefixWidth = 30; // Width of "Pass:"
-    maxVisibleChars = (SCREEN_WIDTH - prefixWidth - 18) / 6; // Reserve space for mode indicator
-    
+    prefixWidth = 30;
     String masked = "";
     for (unsigned int i = 0; i < passwordInput.length(); i++) {
       masked += "*";
     }
     displayText = masked;
-    
   } else if (keyboardContext == CONTEXT_ESPNOW_MAC) {
     display.setCursor(0, 0);
     display.print("MAC:");
-    prefixWidth = 24; // Width of "MAC:"
-    maxVisibleChars = (SCREEN_WIDTH - prefixWidth - 30) / 6; // Reserve space for "HEX"
+    prefixWidth = 24;
     displayText = userInput;
-    
   } else {
     display.setCursor(0, 0);
     display.print(">");
-    prefixWidth = 6; // Width of ">"
-    maxVisibleChars = (SCREEN_WIDTH - prefixWidth - 18) / 6;
+    prefixWidth = 6;
     displayText = userInput;
   }
   
-  // NEW: Smooth scrolling effect
-  int textLength = displayText.length();
-  
-  if (textLength > maxVisibleChars) {
-    // Text is too long, needs scrolling
-    unsigned long currentMillis = millis();
+  // NEW: MARQUEE scrolling effect
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(displayText, 0, 0, &x1, &y1, &w, &h);
+  int textWidth = w;
+  int visibleWidth = SCREEN_WIDTH - prefixWidth - 2;
+
+  if (textWidth > visibleWidth) {
+    display.setTextWrap(false);
     
-    if (currentMillis - lastTextInputUpdate > textInputScrollSpeed) {
-      textInputScrollOffset++;
-      
-      // Reset scroll when we've scrolled past the end
-      if (textInputScrollOffset > textLength - maxVisibleChars + 3) {
-        textInputScrollOffset = 0;
-        delay(500); // Pause at the beginning
+    if (millis() - lastTextInputUpdate > textInputScrollSpeed) {
+      keyboardTextScrollX--;
+      if (keyboardTextScrollX <= -(textWidth + 10)) {
+        keyboardTextScrollX = 0; // Loop back to the start
       }
-      
-      lastTextInputUpdate = currentMillis;
+      lastTextInputUpdate = millis();
     }
     
-    // Extract visible portion
-    int startIdx = min(textInputScrollOffset, textLength - maxVisibleChars);
-    String visibleText = displayText.substring(startIdx, startIdx + maxVisibleChars);
+    display.setCursor(prefixWidth + keyboardTextScrollX, 0);
+    display.print(displayText);
+    display.setCursor(prefixWidth + keyboardTextScrollX + textWidth + 10, 0);
+    display.print(displayText);
     
-    display.setCursor(prefixWidth, 0);
-    display.print(visibleText);
-    
-    // Show scroll indicator
-    if (startIdx > 0) {
-      display.setCursor(prefixWidth - 6, 0);
-      display.print("<");
-    }
-    if (startIdx + maxVisibleChars < textLength) {
-      display.setCursor(SCREEN_WIDTH - 24, 0);
-      display.print(">");
-    }
-    
+    display.setTextWrap(true);
   } else {
-    // Text fits, no scrolling needed
-    textInputScrollOffset = 0;
+    keyboardTextScrollX = 0;
     display.setCursor(prefixWidth, 0);
     display.print(displayText);
   }
@@ -2698,7 +2648,6 @@ void drawKeyboard() {
   int startY = 14;
   const char* currentKeyboard[3][10];
   
-  // Use MAC keyboard for MAC input
   if (keyboardContext == CONTEXT_ESPNOW_MAC) {
     memcpy(currentKeyboard, keyboardMac, sizeof(keyboardMac));
   } else {
@@ -2792,7 +2741,7 @@ void handleKeyPress() {
   } else if (strcmp(key, "<") == 0) {
     if (userInput.length() > 0) {
       userInput.remove(userInput.length() - 1);
-      textInputScrollOffset = 0; // Reset scroll on backspace
+      keyboardTextScrollX = 0; // Reset scroll on backspace
     }
     drawKeyboard();
   } else if (strcmp(key, "#") == 0) {
@@ -2800,7 +2749,7 @@ void handleKeyPress() {
     drawKeyboard();
   } else {
     userInput += key;
-    textInputScrollOffset = 0; // Reset scroll on new input
+    keyboardTextScrollX = 0; // Reset scroll on new input
     if (currentKeyboardMode == MODE_UPPER) {
       currentKeyboardMode = MODE_LOWER;
     }
@@ -2818,7 +2767,7 @@ void handlePasswordKeyPress() {
   } else if (strcmp(key, "<") == 0) {
     if (passwordInput.length() > 0) {
       passwordInput.remove(passwordInput.length() - 1);
-      textInputScrollOffset = 0; // Reset scroll on backspace
+      keyboardTextScrollX = 0; // Reset scroll on backspace
     }
     drawKeyboard();
   } else if (strcmp(key, "#") == 0) {
@@ -2826,7 +2775,7 @@ void handlePasswordKeyPress() {
     drawKeyboard();
   } else {
     passwordInput += key;
-    textInputScrollOffset = 0; // Reset scroll on new input
+    keyboardTextScrollX = 0; // Reset scroll on new input
     if (currentKeyboardMode == MODE_UPPER) {
       currentKeyboardMode = MODE_LOWER;
     }
